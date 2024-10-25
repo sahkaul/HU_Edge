@@ -26,7 +26,8 @@ public class SecurityConfig
                         .requestMatchers("/user/register").permitAll()
                         .requestMatchers("/user/getUser").hasAuthority("ADMIN")
                         .requestMatchers("/user/login").hasAnyAuthority("ADMIN", "USER")
-                        .requestMatchers("/user/resetPassword").hasAnyAuthority("ADMIN", "USER"));
+                        .requestMatchers("/user/resetPassword").hasAnyAuthority("ADMIN", "USER")
+                        .requestMatchers("/user/getAll").hasAnyAuthority("ADMIN"));
 
         http.formLogin(Customizer.withDefaults());
         http.httpBasic(Customizer.withDefaults());

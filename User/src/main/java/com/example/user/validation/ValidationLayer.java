@@ -17,8 +17,12 @@ public class ValidationLayer
         String validationErrors="";
 
         //Validating Email
-        if (!user.getEmail().contains("@")) {
-            validationErrors = validationErrors + "Invalid email ID - '@' is missing; ";
+        if (!user.getEmail().contains("@") ) {
+            validationErrors = validationErrors + " '@' is missing in email; ";
+        }
+
+        if (!user.getEmail().contains(".com") ) {
+            validationErrors = validationErrors + "domain name is missing in email; ";
         }
 
         //Validating username

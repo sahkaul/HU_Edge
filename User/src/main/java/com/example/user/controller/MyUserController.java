@@ -3,6 +3,8 @@ package com.example.user.controller;
 
 import com.example.user.Exception.InvalidUserRegistrationException;
 import com.example.user.constants.SecurityConstants;
+import com.example.user.dto.ResponseDTO;
+import com.example.user.mapping.MappingLayer;
 import com.example.user.validation.ValidationLayer;
 import com.example.user.model.MyUser;
 import com.example.user.repository.MyUserRepository;
@@ -23,6 +25,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -30,6 +34,9 @@ import java.util.Optional;
 @NoArgsConstructor
 @RequestMapping("/user")
 public class MyUserController {
+
+    @Autowired
+    MappingLayer mappingLayer;
 
     @Autowired
     private MyUserRepository userRepository;
@@ -64,7 +71,7 @@ public class MyUserController {
             MyUser savedUser = userRepository.save(user);
 
             if (savedUser.getId() > 0) {
-                return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully");
+                return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
             } else {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User Registration Failed");
             }
@@ -72,19 +79,20 @@ public class MyUserController {
 
     /**
      * This method is responsible for getting the details of a registered User
-     * @param username
+     * @param userId
      * @return ResponseEntity
      */
     @GetMapping("/getUser")
-    public ResponseEntity<?> getUser(@RequestParam String username)
+    public ResponseEntity<?> getUser(@RequestParam("userId") Long userId)
     {
-       Optional<MyUser> optionalUser= userRepository.findByUsername(username);
+       Optional<MyUser> optionalUser= userRepository.findById(userId);
+
        if(optionalUser.isPresent())
        {
            return ResponseEntity.status(HttpStatus.OK).body(optionalUser.get());
        }
        else {
-           throw new UsernameNotFoundException("Username not found");
+           throw new UsernameNotFoundException("User not found");
        }
     }
 
@@ -133,6 +141,25 @@ public class MyUserController {
         return "Password reset successfully";
 
     }
+
+    @GetMapping("/getAll")
+    public ResponseEntity<?> getAllUsers()
+    {
+        Iterable<MyUser> myUserIterable= userRepository.findAll();
+
+        List<ResponseDTO> responseDTOList = new ArrayList<>();
+
+        for(MyUser user: myUserIterable)
+        {
+            responseDTOList.add(mappingLayer.mapUserToResponseDTO(user));
+        }
+
+        return ResponseEntity.status(HttpStatus.OK).body(responseDTOList);
+    }
+
+
+
+
 
 
 }
