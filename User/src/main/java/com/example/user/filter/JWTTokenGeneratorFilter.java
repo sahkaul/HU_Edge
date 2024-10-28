@@ -1,12 +1,15 @@
 package com.example.user.filter;
 
 import com.example.user.constants.SecurityConstants;
+import com.example.user.model.MyUser;
+import com.example.user.repository.MyUserRepository;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,12 +18,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class JWTTokenGeneratorFilter extends OncePerRequestFilter {
+
+    @Autowired
+    MyUserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -37,7 +40,7 @@ public class JWTTokenGeneratorFilter extends OncePerRequestFilter {
             //creating jwt token
             String jwt = Jwts.builder().issuer("Sahil Kaul").subject("JWT Token")
                     .claim("username", authentication.getName())
-                    .claim("authorities", populateAuthorities(authentication.getAuthorities())) // dont set password info in payload of jwt token
+                    .claim("authorities", populateAuthorities(authentication.getAuthorities()))
                     .issuedAt(new Date())
                     .expiration(new Date(System.currentTimeMillis() + 30000000))
                     .signWith(key).compact();  //signature

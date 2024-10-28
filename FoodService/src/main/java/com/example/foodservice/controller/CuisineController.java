@@ -3,10 +3,12 @@ package com.example.foodservice.controller;
 import com.example.foodservice.FoodService;
 import com.example.foodservice.MappingLayer;
 import com.example.foodservice.ValidationLayer;
+import com.example.foodservice.dto.MenuResponseDTO;
 import com.example.foodservice.exceptions.InvalidCuisineException;
 import com.example.foodservice.exceptions.InvalidDishException;
 import com.example.foodservice.model.Cuisine;
 import com.example.foodservice.model.Dish;
+import com.example.foodservice.model.Restaurant;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -34,17 +36,17 @@ public class CuisineController {
      * @return
      */
     @PostMapping("/registerCuisine")
-    public ResponseEntity<?> registerCuisine(@RequestBody Cuisine cuisine) {
+    public ResponseEntity<?> registerCuisine(@RequestBody Cuisine cuisine,@RequestParam("restId") Integer restId) {
 
-        String validationErrors = validationLayer.validateCuisine(cuisine);
+        String validationErrors = validationLayer.validateCuisine(cuisine,restId);
 
         if (!validationErrors.isEmpty()) {
             throw new InvalidCuisineException("Input Invalid: " + validationErrors);
         }
 
-        Cuisine registeredCuisine = foodService.registerCuisine(cuisine);
+        Cuisine registeredCuisine = foodService.registerCuisine(cuisine,restId);
 
-        return ResponseEntity.ok().body("Cuisine Created Successfully");
+        return ResponseEntity.ok().body(registeredCuisine);
 
     }
 
@@ -56,9 +58,9 @@ public class CuisineController {
     @GetMapping("/getCuisine")
     public ResponseEntity<?> getCuisine(@RequestParam("cuisine") String cuisineName) {
 
-        List<Dish> dishes = foodService.getCuisine(cuisineName);
+        Cuisine cuisine =  foodService.getCuisine(cuisineName);
 
-        return ResponseEntity.ok().body(dishes);
+        return ResponseEntity.ok().body(cuisine);
 
     }
 
@@ -67,11 +69,15 @@ public class CuisineController {
      * @return
      */
     @GetMapping("/getAllCuisines")
-    public ResponseEntity<?> getAllCuisines() {
+    public ResponseEntity<?> getAllCuisines(@RequestParam("restId") Integer restId) {
 
-        List<Cuisine> cuisineList = foodService.getAllCuisines();
+        Restaurant restaurant = foodService.getAllCuisines(restId);
 
-        return ResponseEntity.ok().body(cuisineList);
+        MenuResponseDTO menuResponseDTO = new MenuResponseDTO();
+
+        menuResponseDTO.setCuisineList(restaurant.getCuisineList());
+
+        return ResponseEntity.ok().body(menuResponseDTO);
 
     }
 

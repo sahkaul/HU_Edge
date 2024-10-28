@@ -1,5 +1,6 @@
 package com.example.foodservice.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -16,8 +17,19 @@ public class Dish
 
     private float price;
 
-    private int cuisine_id;
+    @ManyToOne
+    @JoinColumn(name = "rest_fk")
+    @JsonIgnore
+    private Restaurant restaurant;
 
-    private String cuisine;
+    @ManyToOne
+    @JoinColumn(name = "cuisine_fk")
+    @JsonIgnore
+    private Cuisine cuisine;
+
+    @Override
+    public String toString() {
+        return "Dish{name='" + name + "'}";
+    }
 
 }

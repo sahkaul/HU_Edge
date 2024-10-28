@@ -1,8 +1,10 @@
 package com.example.foodservice;
 
+import com.example.foodservice.dto.ResponseDTO;
 import com.example.foodservice.dto.RestaurantDTO;
 import com.example.foodservice.exceptions.CuisineDoesNotExistsException;
 import com.example.foodservice.exceptions.InvalidCuisineException;
+import com.example.foodservice.exceptions.InvalidRestaurantException;
 import com.example.foodservice.model.Cuisine;
 import com.example.foodservice.model.Dish;
 import com.example.foodservice.model.Restaurant;
@@ -13,8 +15,11 @@ import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 public class FoodService
@@ -41,13 +46,15 @@ public class FoodService
     {
          Restaurant savedRestaurant;
 
-        try {
-              savedRestaurant = restaurantRepository.save(restaurant);
-        }
-        catch (Exception e)
+/*        Optional<Restaurant> optional = restaurantRepository.findByName(restaurant.getName());
+
+        if(!optional.isEmpty())
         {
-            throw new RuntimeException(e.getMessage());
-        }
+            throw new InvalidRestaurantException("This restaurant already exists");
+        }*/
+
+        savedRestaurant = restaurantRepository.save(restaurant);
+
 
         if (savedRestaurant.getRest_id() > 0)
         {
@@ -61,9 +68,9 @@ public class FoodService
      * Returns information about Restaurant
      * @return
      */
-    public RestaurantDTO getRestaurant()
+    public RestaurantDTO getRestaurant(Integer rest_id)
     {
-        Optional<Restaurant> optional = restaurantRepository.findById(1);
+        Optional<Restaurant> optional = restaurantRepository.findById(rest_id);
 
         Restaurant restaurant = optional.get();
 
@@ -77,18 +84,15 @@ public class FoodService
      * @param cuisine
      * @return
      */
-    public Cuisine registerCuisine(Cuisine cuisine)
+    public Cuisine registerCuisine(Cuisine cuisine,Integer rest_id)
     {
         Cuisine savedCuisine;
 
-        try {
+        Restaurant restaurant = restaurantRepository.findById(rest_id).orElseThrow(()-> new InvalidRestaurantException("Restaurant not found: " + rest_id)) ;
 
-            savedCuisine = cuisineRepository.save(cuisine);
-        }
-        catch (Exception e)
-        {
-            throw new RuntimeException(e.getMessage());
-        }
+        cuisine.setRestaurant(restaurant);
+
+        savedCuisine = cuisineRepository.save(cuisine);
 
         if (savedCuisine.getId() > 0)
         {
@@ -99,7 +103,7 @@ public class FoodService
     }
 
 
-    public List<Dish> getCuisine(String name)
+    public Cuisine getCuisine(String name)
     {
         Optional<Cuisine> optional = cuisineRepository.findByName(name);
 
@@ -110,15 +114,19 @@ public class FoodService
 
         Cuisine savedCuisine = optional.get();
 
-        List<Dish> dishes = (List<Dish>) dishRepo.findAllByCuisine(savedCuisine.getName());
-
-        return dishes;
+        return savedCuisine;
     }
 
-    public List<Cuisine> getAllCuisines()
+    public Restaurant getAllCuisines(Integer restId)
     {
-        List<Cuisine> cuisines = (List<Cuisine>) cuisineRepository.findAll();
-        return cuisines;
+        Optional<Restaurant> optional = restaurantRepository.findById(restId);
+
+        if (optional.isEmpty())
+        {
+            throw new InvalidRestaurantException("Restuarant does not exist");
+        }
+
+        return optional.get();
     }
 
     /**
@@ -126,21 +134,22 @@ public class FoodService
      * @param dish
      * @return
      */
-    public Dish registerDish(Dish dish)
+    public Dish registerDish(Dish dish, Integer restId, Integer cuisineId)
     {
-        Dish savedDish;
+            Dish savedDish;
 
-            Optional<Cuisine> optional = cuisineRepository.findByName(dish.getCuisine());
+            Optional<Cuisine> optionalCuisine = cuisineRepository.findById(cuisineId);
 
-            if(optional.isEmpty())
+            if(optionalCuisine.isEmpty())
             {
                 throw new CuisineDoesNotExistsException("Cuisine not found: " + dish.getCuisine());
             }
+            dish.setCuisine(optionalCuisine.get());
 
-            dish.setCuisine_id(optional.get().getId());
+            Restaurant restaurant = restaurantRepository.findById(restId).orElseThrow(()-> new InvalidRestaurantException("Restaurant not found: " + restId)) ;
+            dish.setRestaurant(restaurant);
 
-            savedDish = dishRepo.save(dish);
-
+        savedDish = dishRepo.save(dish);
 
         if (savedDish.getDish_id() > 0)
         {
@@ -149,6 +158,111 @@ public class FoodService
 
         return null;
 
+    }
+
+
+    public Restaurant getCuisines(Integer restaurantId)
+    {
+        Optional<Restaurant> optional = restaurantRepository.findById(restaurantId);
+
+        if(optional.isEmpty())
+        {
+            throw new InvalidRestaurantException("Restaurant not found: " + restaurantId);
+        }
+
+        return optional.get();
+    }
+
+    public Restaurant getMenu(Integer restaurantId, List<String> inputCuisines, Integer inputPrice)
+    {
+       Optional<Restaurant> optional = restaurantRepository.findById(restaurantId);
+
+       if(optional.isEmpty())
+       {
+           throw new InvalidRestaurantException("Restaurant not found: " + restaurantId);
+       }
+
+        Restaurant restaurant = optional.get();
+        List<Cuisine> cuisineList = restaurant.getCuisineList();
+
+        // Filter by input cuisines
+        cuisineList = filterByCuisines(cuisineList, inputCuisines);
+
+        // Filter by input price
+        cuisineList = filterByPrice(cuisineList, inputPrice);
+
+            restaurant.setCuisineList(cuisineList);
+
+        return restaurant;
+    }
+
+    public List<ResponseDTO> getAllRestaurants(List<String> cuisineName)
+    {
+        Iterable<Restaurant> restaurantList = restaurantRepository.findAll();
+
+        List<ResponseDTO> selectedRestaurants = new ArrayList<>();
+
+        if(!cuisineName.isEmpty())
+        {
+            Iterator<Restaurant> iterator = restaurantList.iterator();
+
+            while(iterator.hasNext())
+            {
+                Restaurant restaurant = iterator.next();
+
+                ResponseDTO responseDTO = new ResponseDTO();
+                responseDTO.setRestId(restaurant.getRest_id());
+
+                for(Cuisine cuisine : restaurant.getCuisineList())
+                {
+                    if(cuisineName.contains(cuisine.getName()))
+                    {
+                        responseDTO.getCuisine().add(cuisine);
+                    }
+                }
+                selectedRestaurants.add(responseDTO);
+            }
+
+            return selectedRestaurants;
+        }
+
+        for(Restaurant restaurant : restaurantList)
+        {
+            ResponseDTO responseDTO= new ResponseDTO();
+            responseDTO.setRestId(responseDTO.getRestId());
+            responseDTO.setCuisine(restaurant.getCuisineList());
+            selectedRestaurants.add(responseDTO);
+        }
+
+        return selectedRestaurants;
+
+    }
+
+    public List<Cuisine> filterByPrice(List<Cuisine> cuisineList, Integer inputPrice) {
+        if (inputPrice == null) {
+            return cuisineList;
+        }
+
+        return cuisineList.stream()
+                .map(cuisine -> {
+                    List<Dish> filteredDishes = cuisine.getDishList().stream()
+                            .filter(dish -> dish.getPrice() <= inputPrice)
+                            .collect(Collectors.toList());
+                    cuisine.setDishList(filteredDishes);
+                    return cuisine;
+                })
+                .filter(cuisine -> !cuisine.getDishList().isEmpty())
+                .collect(Collectors.toList());
+    }
+
+    public List<Cuisine> filterByCuisines(List<Cuisine> cuisineList, List<String> inputCuisines) {
+        if (inputCuisines == null || inputCuisines.isEmpty()) {
+            return cuisineList;
+        }
+
+        return cuisineList.stream()
+                .filter(cuisine -> inputCuisines.contains(cuisine.getName()))
+                .collect(Collectors.toList());
     }
 
 }

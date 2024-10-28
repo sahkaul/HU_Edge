@@ -1,10 +1,10 @@
 package com.example.foodservice.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
 import lombok.Data;
+
+import java.util.List;
 
 @Entity
 @Data
@@ -15,4 +15,17 @@ public class Cuisine
    private int id;
 
    private String name;
+
+   @ManyToOne
+   @JoinColumn(name = "rest_fk")
+   @JsonIgnore
+   private Restaurant restaurant;
+
+   @OneToMany(mappedBy = "cuisine")
+   private List<Dish> dishList;
+
+   @Override
+   public String toString() {
+      return "Cuisine{name='" + name + "'}";
+   }
 }

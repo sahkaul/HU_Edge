@@ -3,13 +3,17 @@ package com.example.foodservice;
 import com.example.foodservice.dto.RestaurantDTO;
 import com.example.foodservice.exceptions.CuisineAlreadyExistsException;
 import com.example.foodservice.exceptions.DishAlreadyExistsException;
+import com.example.foodservice.exceptions.InvalidRestaurantException;
 import com.example.foodservice.model.Cuisine;
 import com.example.foodservice.model.Dish;
+import com.example.foodservice.model.Restaurant;
 import com.example.foodservice.repository.CuisineRepo;
 import com.example.foodservice.repository.DishRepo;
+import com.example.foodservice.repository.RestaurantRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -19,6 +23,8 @@ public class ValidationLayer
     CuisineRepo cuisineRepo;
     @Autowired
     private DishRepo dishRepo;
+    @Autowired
+    private RestaurantRepository restaurantRepository;
 
     public ValidationLayer() {
     }
@@ -31,6 +37,21 @@ public class ValidationLayer
     public String validateRestaurant(RestaurantDTO restaurant) {
 
         String validationErrors="";
+
+        if(restaurant.getName()==null)
+        {
+            throw new InvalidRestaurantException("Restaurant name is required");
+        }
+
+        if(restaurant.getAddress()==null)
+        {
+            throw new InvalidRestaurantException("Restaurant address is required");
+        }
+
+        if(restaurant.getPhone()==null)
+        {
+            throw new InvalidRestaurantException("Restaurant phone is required");
+        }
 
         if(restaurant.getPhone().length() != 10)
         {
@@ -45,24 +66,29 @@ public class ValidationLayer
         return validationErrors;
     }
 
-    public String validateCuisine(Cuisine cuisine) {
+    public String validateCuisine(Cuisine cuisine, Integer restId) {
 
-        String validationErrors="";
+        Optional<Restaurant> rest = restaurantRepository.findById(restId);
 
-        Optional<Cuisine> optional = cuisineRepo.findByName(cuisine.getName());
+        List<Cuisine> cuisineList = rest.get().getCuisineList();
 
-        if(optional.isPresent())
+        for(Cuisine c: cuisineList)
         {
-            throw new CuisineAlreadyExistsException(cuisine.getName() + "Cuisine already exists");
+            if(c.getName().equals(cuisine.getName()))
+            {
+                throw new CuisineAlreadyExistsException(cuisine.getName() + "Cuisine already exists");
+
+            }
         }
 
+        rest.get().getCuisineList().add(cuisine);
+        cuisine.setRestaurant(rest.get());
 
-        if (cuisine.getName().length() < 5)
-        {
-            validationErrors=validationErrors + "Name must be at least 5 characters\n";
-        }
+        cuisineRepo.save(cuisine);
 
-        return validationErrors;
+        restaurantRepository.save(rest.get());
+
+        return "" ;
     }
 
     /**

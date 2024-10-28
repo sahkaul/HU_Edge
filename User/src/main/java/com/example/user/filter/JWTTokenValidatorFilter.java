@@ -25,6 +25,7 @@ public class JWTTokenValidatorFilter  extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
+
         String jwt = request.getHeader(SecurityConstants.JWT_HEADER); //name of response header via which we had initially sent the token
          jwt = jwt.substring(7);
 
@@ -42,7 +43,6 @@ public class JWTTokenValidatorFilter  extends OncePerRequestFilter {
 
                 String username = String.valueOf(claims.get("username"));
                 String authorities = (String) claims.get("authorities");
-
 
                 //this indicates to spring security that authentication is successful
                 Authentication auth = new UsernamePasswordAuthenticationToken(username, null,

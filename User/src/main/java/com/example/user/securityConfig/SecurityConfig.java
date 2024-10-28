@@ -15,18 +15,17 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationFi
 @Configuration
 public class SecurityConfig
 {
+
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(httpSecurityCsrfConfigurer -> httpSecurityCsrfConfigurer.disable())
-        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                .addFilterAfter(new JWTTokenGeneratorFilter(), BasicAuthenticationFilter.class) // generate jwt token after authentication filter
-                .addFilterBefore(new JWTTokenValidatorFilter(), BasicAuthenticationFilter.class) // execute jwt validation before authentication filter
                 .authorizeHttpRequests(requests -> requests
                         .requestMatchers("/user/register").permitAll()
                         .requestMatchers("/user/getUser").hasAuthority("ADMIN")
                         .requestMatchers("/user/login").hasAnyAuthority("ADMIN", "USER")
-                        .requestMatchers("/user/resetPassword").hasAnyAuthority("ADMIN", "USER")
+                        .requestMatchers("{userId}/user/resetPassword").hasAnyAuthority("ADMIN", "USER")
                         .requestMatchers("/user/getAll").hasAnyAuthority("ADMIN"));
 
         http.formLogin(Customizer.withDefaults());

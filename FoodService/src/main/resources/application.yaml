@@ -1,5 +1,5 @@
 server:
-  port: 8071
+  port: 8073
 
 eureka:
   instance:
@@ -16,6 +16,9 @@ spring:
     driverClassName: com.mysql.cj.jdbc.Driver
     username: root
     password: password
+  jpa:
+    hibernate:
+      ddl-auto: update
   application:
     name: Food
 

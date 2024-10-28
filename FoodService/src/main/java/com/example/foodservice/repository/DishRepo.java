@@ -12,5 +12,4 @@ public interface DishRepo extends CrudRepository<Dish, Integer> {
 
     Optional<Dish> findByName(String dishName);
 
-    Iterable<Dish> findAllByCuisine(String cuisine);
 }

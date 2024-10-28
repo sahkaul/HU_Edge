@@ -33,7 +33,7 @@ public class DishController {
 
 
     @PostMapping("/registerDish")
-    public ResponseEntity<?> registerDish(@RequestBody Dish dish) {
+    public ResponseEntity<?> registerDish(@RequestBody Dish dish, @RequestParam("restId") Integer restId, @RequestParam("cuisineId") Integer cuisineId) {
 
         String validationErrors = validationLayer.validateDish(dish);
 
@@ -41,9 +41,9 @@ public class DishController {
             throw new InvalidDishException("Dish Invalid: " + validationErrors);
         }
 
-        Dish registeredDish = foodService.registerDish(dish);
+        Dish registeredDish = foodService.registerDish(dish, restId, cuisineId);
 
-        return ResponseEntity.ok().body("Dish Added Successfully");
+        return ResponseEntity.ok().body(registeredDish);
 
     }
 

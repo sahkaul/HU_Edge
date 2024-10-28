@@ -82,18 +82,38 @@ public class MyUserController {
      * @param userId
      * @return ResponseEntity
      */
-    @GetMapping("/getUser")
-    public ResponseEntity<?> getUser(@RequestParam("userId") Long userId)
+    @GetMapping("{userId}/getUser")
+    public ResponseEntity<?> getUser(@PathVariable("userId") Long userId)
     {
        Optional<MyUser> optionalUser= userRepository.findById(userId);
 
-       if(optionalUser.isPresent())
+       if(!optionalUser.isPresent())
        {
-           return ResponseEntity.status(HttpStatus.OK).body(optionalUser.get());
-       }
-       else {
            throw new UsernameNotFoundException("User not found");
        }
+
+           String jwt = request.getHeader(SecurityConstants.JWT_HEADER); //name of response header via which we had initially sent the token
+           jwt = jwt.substring(7);
+
+           SecretKey key = Keys.hmacShaKeyFor(
+                   SecurityConstants.JWT_KEY.getBytes(StandardCharsets.UTF_8));
+
+           Claims claims = Jwts.parser()
+                   .verifyWith(key)
+                   .build()
+                   .parseSignedClaims(jwt) //This will throw exceptions if hash value isn't matching,token is expired etc
+                   .getPayload();
+
+           String username = String.valueOf(claims.get("username"));
+
+           MyUser savedUser = userRepository.findByUsername(username).get();
+
+           if(savedUser.getId() != userId)
+           {
+               throw new RuntimeException("Entered UserId does not match with jwt token. Operation not allowed");
+           }
+
+           return ResponseEntity.ok(optionalUser.get());
     }
 
     /**
@@ -115,8 +135,62 @@ public class MyUserController {
 
     }
 
-    @PutMapping("/resetPassword")
-    public String resetPassword(@RequestParam("newPassword") String newPassword)
+    /**
+     * only Gateway server calls this endpoint
+     * @param username
+     * @return
+     */
+    @GetMapping("/getUserId")
+    public ResponseEntity<?> getUser(@RequestParam("username") String username)
+    {
+        Optional<MyUser> optional = userRepository.findByUsername(username);
+
+        if(optional.isEmpty())
+        {
+            return null;
+        }
+
+        return ResponseEntity.ok(optional.get().getId());
+
+    }
+
+
+    @PutMapping("{userId}/resetPassword")
+    public String resetPassword(@PathVariable("userId") Long userId,
+            @RequestParam("newPassword") String newPassword)
+    {
+        String jwt = request.getHeader(SecurityConstants.JWT_HEADER); //name of response header via which we had initially sent the token
+        jwt = jwt.substring(7);
+
+        SecretKey key = Keys.hmacShaKeyFor(
+                SecurityConstants.JWT_KEY.getBytes(StandardCharsets.UTF_8));
+
+
+        Claims claims = Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(jwt) //This will throw exceptions if hash value isn't matching,token is expired etc
+                .getPayload();
+
+        String username = String.valueOf(claims.get("username"));
+        MyUser savedUser = userRepository.findByUsername(username).get();
+
+        if(savedUser.getId() != userId)
+        {
+            throw new RuntimeException("Entered UserId does not match with jwt token. Operation not allowed");
+        }
+        MyUser savedUser = userRepository.findByUsername(username).get();
+        String hashPassword = passwordEncoder.encode(newPassword);
+        savedUser.setPassword(hashPassword);
+        userRepository.save(savedUser);
+
+        return "Password reset successfully";
+
+    }
+
+    @PutMapping("{userId}/update")
+    public String updateUser(@PathVariable("userId") Long userId,
+                                @RequestBody MyUser inputUser)
     {
         String jwt = request.getHeader(SecurityConstants.JWT_HEADER); //name of response header via which we had initially sent the token
         jwt = jwt.substring(7);
@@ -135,12 +209,20 @@ public class MyUserController {
 
         MyUser savedUser = userRepository.findByUsername(username).get();
 
-        savedUser.setPassword(newPassword);
+        if(savedUser.getId() != userId)
+        {
+            throw new RuntimeException("Entered UserId does not match with jwt token. Operation not allowed");
+        }
+
+        savedUser.setEmail(inputUser.getEmail());
+        savedUser.setUsername(inputUser.getUsername());
+
         userRepository.save(savedUser);
 
-        return "Password reset successfully";
+        return "User updated successfully";
 
     }
+
 
     @GetMapping("/getAll")
     public ResponseEntity<?> getAllUsers()
